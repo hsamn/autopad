@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 from autopad.config import DETECT
-from autopad.utils.logger import get_logger, log_image
+from autopad.utils.logger import log_image, get_logger
 
 logger = get_logger(__name__)
 
@@ -27,102 +27,129 @@ def get_template(file_path, mask_threshold):
 
 detect = dict()
 for name, entity in DETECT.items():
+    logger.info(f"Loading templates for \"{name}\"")
     detect[name] = {
         "templates": []
     }
-    for i, info in enumerate(entity["templates"]):
-        template_path = info["path"]
-        mask_threshold = info["mask_threshold"]
-
-        logger.info(f"Loading template {i + 1} for entity {name} from {template_path}")
-
+    for i, template in enumerate(entity["templates"]):
+        template_path = template["path"]
+        mask_threshold = template["mask_threshold"]
         img, mask = get_template(template_path, mask_threshold)
         detect[name]["templates"].append({
             "img": img,
             "mask": mask
         })
+        logger.info(f"Template ({i + 1}) loaded")
 
-        log_image("template_img", "template_img", img)
-        log_image("template_img", "template_mask", mask)
-
-def calc_ccoeff(img, template_img, mask):
-    result = cv2.matchTemplate(img, template_img, cv2.TM_CCOEFF_NORMED, mask=mask)
+def calc_ccoeff(img, template_img, template_mask):
+    result = cv2.matchTemplate(img, template_img, cv2.TM_CCOEFF_NORMED, mask=template_mask)
     result[np.isinf(result)] = 0
     result[np.isnan(result)] = 0
+
     # I think of using the following line to detect night mode in some cases
     # since in a lot of times, night mode is just the inverse of the image
     # and the ccoeff will be negatively high when matching the inverse image
-    n_val, val, n_loc, loc = cv2.minMaxLoc(result)
-    logger.info(f"Negative ccoeff is {n_val} at {n_loc}")
+
+    min_val, val, min_loc, loc = cv2.minMaxLoc(result)
+    h, w = template_img.shape[:2]
+    logger.info(f"Template size {(w, h)}")
+    logger.info(f"Max CCOEFF {val} at {loc}")
+    logger.info(f"Min CCOEFF {min_val} at {min_loc}")
     return loc, val
 
-def calc_sqdiff(img, template_img):
-    return cv2.matchTemplate(img, template_img, cv2.TM_SQDIFF_NORMED)[0, 0]
+def calc_inv_sqdiff(img, loc, cache_match, cache_mask):
+    (x, y), (h, w) = loc, cache_match.shape[:2]
+    match = img[y:y+h, x:x+w]
+    sqdiff_val = cv2.matchTemplate(match, cache_match, cv2.TM_SQDIFF_NORMED, mask=cache_mask)[0, 0]
+    sqdiff_inv_val = 1 - sqdiff_val
+    logger.info(f"Inv-SQDIFF {sqdiff_inv_val} at {(x, y)} with size {(w, h)}")
+    return loc, (w, h), sqdiff_inv_val
 
 detected_cache = dict()
-def scan_templates(img, templates, entity):
-    entities = dict()
+def scan_templates(img, entity):
+    detected = dict()
+
+    logger.info(f"Looking for {entity}")
 
     if entity in detected_cache:
-        logger.info(f"Found cache in {entity}")
-        (x, y), cache_match = detected_cache[entity]["loc"], detected_cache[entity]["match"]
-        h, w = cache_match.shape[:2]
-        match = img[y:y+h, x:x+w]
-        cache_val = calc_sqdiff(match, cache_match)
-        logger.info(f"Cache sqdiff-inv score: {1 - cache_val}")
-        if cache_val < 0.25:
-            logger.info("Cache Succeeded > 0.75")
-            center = detected_cache[entity]["center"]
-            entities[entity] = {
-                "center": center,
+        logger.info(f"Found cache")
+        cache = detected_cache[entity]
+        loc, size, val = calc_inv_sqdiff(img, cache["loc"], cache["match"], cache["mask"])
+        if val > 0.75:
+            logger.info(f"Cache succeeded (> 0.75)")
+            detected[entity] = {
+                "loc": loc,
+                "size": size,
                 "cached": True
             }
-            return entities
-        logger.info("Cache Faild <= 0.75")
+            return detected
 
+    templates = detect[entity]["templates"]
     for i, template in enumerate(templates):
-        logger.info(f"Trying template {i + 1}")
+        logger.info(f"Trying template ({i + 1})")
         loc, val = calc_ccoeff(img, template["img"], template["mask"])
-        logger.info(f"Templiate ccoeff scored: {val} at top-left: {loc}")
-        if val > 0.75:
-            logger.info(f"Templiate Succeeded > 0.75")
-            if entity not in entities or (val > entities[entity]["val"] or (val == entities[entity]["val"] and i < entities[entity]["rank"])):
-                logger.info(f"Best Template So Far")
-                entities[entity] = {
-                    "rank": i,
-                    "template": template,
-                    "loc": loc,
-                    "val": val
-                }
+        if val <= 0.75:
+            continue
+        logger.info("Template succeeded (> 0.75)")
+        if entity in detected:
+            prev = detected[entity]
+            prev_val, prev_rank = prev["val"], prev["rank"]
+            if val < prev_val or (val == prev_val and i > prev_rank):
+                continue
+        logger.info("Best template so far")
 
-    if entity in entities:
-        (x, y), (h, w) = entities[entity]["loc"], entities[entity]["template"]["img"].shape[:2]
-        center = (x + (w - 1) / 2, y + (h - 1) / 2)
-        entities[entity] = {
-            "center": center,
+        detected[entity] = {
+            "rank": i,
+            "template": template,
+            "loc": loc,
+            "val": val
+        }
+
+    if entity in detected:
+        found = detected[entity]
+        loc, template = found["loc"], found["template"]
+        (x, y) = loc
+        (h, w) = template["img"].shape[:2]
+        template_mask = template["mask"]
+
+        detected_cache[entity] = {
+            "loc": loc,
+            "match": img[y:y+h, x:x+w],
+            "mask": template_mask
+        }
+
+        logger.info("Got a new cache")
+
+        detected[entity] = {
+            "loc": loc,
+            "size": (w, h),
             "cached": False
         }
-        detected_cache[entity] = {
-            "loc": (x, y),
-            "center": center,
-            "match": img[y:y+h, x:x+w]
-        }
-    return entities
+    return detected
 
+img_counter = 0
 def find_entities(img, entities):
-    log_image("img", "img", img)
+    global img_counter
+    img_counter += 1
+
+    log_image(f"img_{img_counter:03d}.png", img)
+
     detected = dict()
     for entity in entities:
-        logger.info(f"Looking for {entity}")
-        detected.update(scan_templates(img, detect[entity]["templates"], entity))
-    for entity, res in detected.items():
-        cached = res["cached"]
-        cache = detected_cache[entity]
-        (x, y), center, cache_img = cache["loc"], cache["center"], cache["match"]
-        (h, w) = cache_img.shape[:2]
-        logger.info(f"Detected: {entity}")
-        log_image("img", "res", img[y:y+h, x:x+w])
-        if not cached:
-            log_image("img", "cache", cache_img)
+        detected.update(scan_templates(img, entity))
+
+    for entity, found in detected.items():
+        (x, y), (w, h) = found["loc"], found["size"]
+        res = img.copy()
+
+        cv2.rectangle(
+            res,
+            (x, y),
+            (x + w, y + h),
+            (0, 255, 0),
+            2
+        )
+
+        log_image(f"img_{img_counter:03d}_res_{entity}.png", res)
     return detected
 

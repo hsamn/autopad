@@ -1,6 +1,4 @@
 import json
-import numpy as np
-from mss.windows import MSS as mss
 
 def read_json(file_path):
     with open(file_path, "rt", encoding="utf-8") as file:
@@ -19,13 +17,4 @@ def ensure_unique_path(file_name, file_ext, parent_dir):
 
 def get_pretty_json(json_data):
     return json.dumps(json_data, ensure_ascii = False, indent = 4)
-
-sct = mss.mss()
-monitor = sct.monitors[1]
-
-def get_frame():
-    return np.array(sct.grab(monitor))[:, :, :3]
-
-def close_mss():
-    sct.close()
 
