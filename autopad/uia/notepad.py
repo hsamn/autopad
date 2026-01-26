@@ -87,6 +87,19 @@ def paste_and_save(window, text, file_name, file_ext):
     window.type_keys("^v")
     logger.info("Waiting for past")
     time.sleep(0.5)
+    try:
+        doc = window.child_window(control_type="Document")
+        logger.info(f"Document Obj before: {doc}")
+        doc.wait("ready")
+        logger.info(f"Document Obj after ready: {doc}")
+        doc.set_focus()
+        logger.info(f"Document Obj after focus: {doc}")
+        doc.wait("active")
+        logger.info(f"Document Obj after active: {doc}")
+        logger.info(f"Document Text: {doc.window_text()}")
+        logger.info(f"Document Text: {doc.get_properties()}")
+    except Exception as e:
+        logger.info(f"Error getting the doc: {e}")
     # save as
     logger.info("Opening save as dialog")
     window.type_keys("^+s")
@@ -100,6 +113,17 @@ def paste_and_save(window, text, file_name, file_ext):
     save_as.set_focus()
     logger.info("Waiting for it to be active")
     save_as.wait("active")
+    try:
+        save_as_edit = save_as.child_window(title_re=r"(?i).*file.*name.*", control_type="Edit")
+        save_as_encoding = save_as.child_window(title_re=r"(?i).*encoding.*", control_type="ComboBox")
+        save_as_button = save_as.child_window(title_re=r"(?i).*save.*", control_type="Button")
+        logger.info(f"Before: {save_as_edit}, {save_as_encoding}, {save_as_button}")
+        save_as_edit.wait("ready")
+        save_as_encoding.wait("ready")
+        save_as_button.wait("ready")
+        logger.info(f"After ready: {save_as_edit}, {save_as_encoding}, {save_as_button}")
+    except Exception as e:
+        logger.info(f"Error getting the save as elements: {e}")
     # ensure we have a unique path
     logger.info("Ensuring unique path")
     save_to = ensure_unique_path(file_name, file_ext, OUT_PATH)
