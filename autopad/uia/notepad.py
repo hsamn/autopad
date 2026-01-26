@@ -67,7 +67,8 @@ def open_notepad(x, y):
             logger.info(f"Picked {(pid, hwnd)}")
             app = application.connect(process=pid)
             window = app.window(handle=hwnd)
-            return app, window
+            window_spec = app.window(handle=hwnd)
+            return app, window, window_spec
     raise TimeoutError("Timeout waiting for new notepad window to be opened")
 
 def paste_and_save(window, text, file_name, file_ext):
