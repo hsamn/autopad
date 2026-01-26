@@ -18,7 +18,7 @@ def handle_post(content, name, ext, sct, monitor):
             x, y = get_notepad_center(sct, monitor)
             logger.info(f"Got notepad center {(x, y)}")
             logger.info("Opening notepad")
-            app, window, window_spec = open_notepad(x, y)
+            app, window = open_notepad(x, y)
             logger.info("Saving the user's clipboard")
             original_clipboard = pyperclip.paste()
             logger.info("Pasting and saving")
@@ -27,7 +27,7 @@ def handle_post(content, name, ext, sct, monitor):
                 logger.info("Closing the window")
                 window.close()
                 logger.info("Waiting for it to not be existing")
-                window_spec.wait_not("exists")
+                time.sleep(3)
             finally:
                 logger.info("Restoring user's clipboard")
                 pyperclip.copy(original_clipboard)
