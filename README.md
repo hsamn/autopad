@@ -43,8 +43,8 @@ It utilizes a hybrid approach, combining **UIA (User Interface Automation)** for
 ![Bottom Right Medium Detected Screenshot](deliverables/img_004_res_notepad.png)
 
 ### Center Medium
-![Center Medium Raw Screenshot](deliverables/img_005.png)
-![Center Medium Detected Screenshot](deliverables/img_005_res_notepad.png)
+![Center Medium Raw Screenshot](deliverables/img_006.png)
+![Center Medium Detected Screenshot](deliverables/img_006_res_notepad.png)
 
 ### Large
 ![Large Raw Screenshot](deliverables/img_001.png)
