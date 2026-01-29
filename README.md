@@ -32,6 +32,14 @@ It utilizes a hybrid approach, combining **UIA (User Interface Automation)** for
     uv sync
     ```
 
+## ▶️ Usage
+
+To start the automation script, use the standard entry point via `uv`:
+
+```bash
+uv run python -m autopad.main
+```
+
 ## 🧪 Tests
 
 ### Top Left Medium
@@ -53,14 +61,6 @@ It utilizes a hybrid approach, combining **UIA (User Interface Automation)** for
 ### Small
 ![Small Raw Screenshot](deliverables/img_003.png)
 ![Small Detected Screenshot](deliverables/img_003_res_notepad.png)
-
-## ▶️ Usage
-
-To start the automation script, use the standard entry point via `uv`:
-
-```bash
-uv run python -m autopad.main
-```
 
 ## 📁 Project Structure
 
