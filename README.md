@@ -32,6 +32,28 @@ It utilizes a hybrid approach, combining **UIA (User Interface Automation)** for
     uv sync
     ```
 
+## 🧪 Tests
+
+### Top Left Medium
+![Top Left Medium Raw Screenshot](deliverables/img_001.png)
+![Top Left Medium Detected Screenshot](deliverables/img_001_res_notepad.png)
+
+### Bottom Right Medium
+![Bottom Right Medium Raw Screenshot](deliverables/img_002.png)
+![Bottom Right Medium Detected Screenshot](deliverables/img_002_res_notepad.png)
+
+### Center Medium
+![Center Medium Raw Screenshot](deliverables/img_003.png)
+![Center Medium Detected Screenshot](deliverables/img_003_res_notepad.png)
+
+### Large
+![Large Raw Screenshot](deliverables/img_004.png)
+![Large Detected Screenshot](deliverables/img_004_res_notepad.png)
+
+### Small
+![Small Raw Screenshot](deliverables/img_005.png)
+![Small Detected Screenshot](deliverables/img_005_res_notepad.png)
+
 ## ▶️ Usage
 
 To start the automation script, use the standard entry point via `uv`:
